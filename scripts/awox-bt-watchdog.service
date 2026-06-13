@@ -1,0 +1,11 @@
+[Unit]
+Description=AwoX BT dongle watchdog (recovers a wedged RTL8761B via USB authorized toggle)
+Documentation=file:/home/basti/NetAwoxLightApi/DEPLOY-PI.md
+After=bluetooth.service
+
+[Service]
+Type=oneshot
+# Runs as root (default): writing /sys/bus/usb/devices/*/authorized is root-only.
+ExecStart=/home/basti/NetAwoxLightApi/scripts/awox-bt-watchdog.sh run
+# The authorized toggle + firmware re-download + settle takes well under a minute even with 3 retries.
+TimeoutStartSec=90

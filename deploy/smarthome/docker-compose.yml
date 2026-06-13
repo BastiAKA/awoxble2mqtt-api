@@ -1,0 +1,31 @@
+# Home Assistant + Matterbridge on the Pi, next to awox-api / mosquitto / the MQTT bridge.
+#
+#   HA          : consumes our MQTT discovery (lamps/scenes show up automatically).
+#   Matterbridge: exposes HA's entities to SmartThings/Apple/Google/Alexa over Matter.
+#
+# Both use host networking — Matter (and HA's mDNS) need it for local discovery + commissioning.
+#
+#   sudo docker compose -f deploy/smarthome/docker-compose.yml up -d
+#
+# Then:
+#   - HA UI         : http://<pi>:8123   → onboard, MQTT integration auto-finds the broker (localhost:1883).
+#   - Matterbridge  : http://<pi>:8283   → add the "matterbridge-hass" plugin, paste an HA long-lived token,
+#                     set mode "bridge", then scan the shown QR/pairing code in the SmartThings app.
+
+services:
+  homeassistant:
+    image: ghcr.io/home-assistant/home-assistant:stable
+    container_name: homeassistant
+    network_mode: host
+    volumes:
+      - ./ha-config:/config
+      - /etc/localtime:/etc/localtime:ro
+    restart: unless-stopped
+
+  matterbridge:
+    image: luligu/matterbridge:latest
+    container_name: matterbridge
+    network_mode: host
+    volumes:
+      - ./matterbridge:/root/.matterbridge
+    restart: unless-stopped

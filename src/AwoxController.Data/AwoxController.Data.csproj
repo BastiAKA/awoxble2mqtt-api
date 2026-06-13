@@ -1,0 +1,28 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\AwoxController.Core\AwoxController.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- EF Core 10 throughout. Pomelo has no EF Core 10 build yet, so we use Oracle's official
+         MySQL provider (MySql.EntityFrameworkCore 10.x), which targets EF Core 10 / .NET 10. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.7" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.7">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.0" />
+    <PackageReference Include="MySql.EntityFrameworkCore" Version="10.0.7" />
+    <!-- Override a vulnerable transitive (NU1903) pulled by the MySQL provider with the patched build. -->
+    <PackageReference Include="System.Security.Cryptography.Xml" Version="10.0.8" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

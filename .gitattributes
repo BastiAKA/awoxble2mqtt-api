@@ -1,0 +1,6 @@
+# Files consumed on the Linux Raspberry Pi must keep LF line endings regardless of the committer's
+# platform — a CRLF in a shebang breaks the script (`/usr/bin/env bash\r: No such file or directory`),
+# and systemd is equally unforgiving of CRLF in unit files.
+*.sh      text eol=lf
+*.service text eol=lf
+*.timer   text eol=lf

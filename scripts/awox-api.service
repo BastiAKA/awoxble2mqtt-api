@@ -1,0 +1,23 @@
+[Unit]
+Description=AwoxController API (AwoX lamp control)
+# Bluetooth + network must be up first.
+After=bluetooth.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=basti
+WorkingDirectory=/home/basti/NetAwoxLightApi/src/AwoxController.Api
+
+# Development loads appsettings.Development.json (mesh creds, DB, devices). The Kestrel override binds
+# the LAN interface (the 127.0.0.1 in appsettings.json otherwise wins over ASPNETCORE_URLS).
+Environment=ASPNETCORE_ENVIRONMENT=Development
+Environment=Kestrel__Endpoints__Http__Url=http://0.0.0.0:5080
+Environment=DOTNET_CLI_TELEMETRY_OPTOUT=1
+
+ExecStart=/home/basti/.dotnet/dotnet bin/Release/net10.0/AwoxController.Api.dll
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

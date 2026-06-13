@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <!-- net10.0 = publish target for the Raspberry Pi; net10.0-windows pulls the WinRT BLE backend
+         for local debugging. Pick a TFM when running: dotnet run -f net10.0-windows10.0.19041.0.
+         The Windows TFM is only added on Windows so Linux/Pi builds don't need the Windows
+         targeting packs (avoids error NETSDK1100). -->
+    <TargetFrameworks>net10.0</TargetFrameworks>
+    <TargetFrameworks Condition="'$(OS)' == 'Windows_NT'">net10.0;net10.0-windows10.0.19041.0</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>AwoxController.Api</RootNamespace>
+    <UserSecretsId>5caa3a5e-a1bd-49f4-9d7d-d8abadb554c1</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.0" />
+    <!-- Interactive Swagger UI (served at /swagger) for debugging; reads the OpenAPI doc that
+         AddOpenApi() generates, so no duplicate spec generation. -->
+    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="10.2.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AwoxController.Core\AwoxController.Core.csproj" />
+    <ProjectReference Include="..\AwoxController.Zigbee\AwoxController.Zigbee.csproj" />
+    <ProjectReference Include="..\AwoxController.Ble\AwoxController.Ble.csproj" />
+    <ProjectReference Include="..\AwoxController.Data\AwoxController.Data.csproj" />
+  </ItemGroup>
+
+</Project>

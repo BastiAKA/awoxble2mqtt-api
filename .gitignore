@@ -1,0 +1,46 @@
+## .NET build output
+bin/
+obj/
+publish/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+
+## Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## Rider / VS Code
+.idea/
+.vscode/
+
+## NuGet
+*.nupkg
+.nuget/
+
+## OS files
+.DS_Store
+Thumbs.db
+
+## Local secrets (do not commit credentials)
+appsettings.*.Local.json
+appsettings.Development.json
+secrets.json
+
+## AwoX cloud dumps (contain mesh passwords + device MACs)
+scripts/credentials.raw.json
+scripts/devices.raw.json
+
+## RE captures (contain device bugreport + a mesh session)
+debug/
+
+## SQLite dev/fallback database files
+*.db
+*.db-shm
+*.db-wal

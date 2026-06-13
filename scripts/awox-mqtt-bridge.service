@@ -1,0 +1,22 @@
+[Unit]
+Description=AwoxController MQTT bridge (Home Assistant discovery)
+# Needs the network, the broker and the API. The bridge retries all of them itself, so these are
+# best-effort ordering hints, not hard requirements.
+After=network-online.target mosquitto.service awox-api.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=basti
+WorkingDirectory=/home/basti/NetAwoxLightApi/src/AwoxController.MqttBridge
+
+# Worker host: defaults to the Production environment → loads appsettings.json (ApiBaseUrl=localhost:5080,
+# Mqtt:Host=localhost:1883). Override via Environment=Bridge__Mqtt__Host=... etc. if broker/API move.
+Environment=DOTNET_CLI_TELEMETRY_OPTOUT=1
+
+ExecStart=/home/basti/.dotnet/dotnet bin/Release/net10.0/AwoxController.MqttBridge.dll
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

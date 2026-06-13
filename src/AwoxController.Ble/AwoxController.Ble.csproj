@@ -1,0 +1,28 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- net10.0 = Raspberry Pi (BlueZ backend); net10.0-windows = local debugging via WinRT.
+         The WinRT sources are guarded with #if WINDOWS so they only compile for the Windows TFM.
+         The Windows TFM is only added when building on Windows, so Linux/Pi builds don't need the
+         Windows targeting packs (avoids error NETSDK1100). -->
+    <TargetFrameworks>net10.0</TargetFrameworks>
+    <TargetFrameworks Condition="'$(OS)' == 'Windows_NT'">net10.0;net10.0-windows10.0.19041.0</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>AwoxController.Ble</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- BlueZ GATT client over D-Bus. Only functional on Linux (the Raspberry Pi);
+         on other platforms the BLE service stays dormant. -->
+    <PackageReference Include="Linux.Bluetooth" Version="6.0.0-pre3" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AwoxController.Core\AwoxController.Core.csproj" />
+  </ItemGroup>
+
+</Project>

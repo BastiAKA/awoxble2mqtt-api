@@ -1,0 +1,13 @@
+[Unit]
+Description=Periodically run the AwoX BT dongle watchdog
+
+[Timer]
+# Give the boot-time firmware load a chance before we ever interfere.
+OnBootSec=2min
+# Then check once a minute. is_wedged() only fires on the persistent firmware-download wedge, so a
+# healthy adapter just costs a couple of cheap hciconfig reads.
+OnUnitActiveSec=60s
+AccuracySec=10s
+
+[Install]
+WantedBy=timers.target

@@ -112,6 +112,7 @@ Defaults are seeded automatically by the API on first start (and pre-seeded by
 | `ble.relay_verify_timeout_ms` | `5000` | how long to wait for the target's confirming advert |
 | `ble.relay_reachable_ttl_seconds` | `30` | how long a learned "reachable (host→target)" verdict is trusted |
 | `ble.relay_unreachable_ttl_seconds` | `120` | how long a learned "unreachable" verdict is trusted before re-probing |
+| `ble.max_connections` | `2` | max held BLE sessions, one per mesh — lets commands for different meshes run concurrently instead of reconnecting on each mesh switch. `1` = legacy single-session behaviour |
 
 ## MQTT bridge config
 

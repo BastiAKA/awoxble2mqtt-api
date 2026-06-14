@@ -15,13 +15,20 @@ public static class AwoxBleServiceCollectionExtensions
     {
         services.Configure<AwoxBleOptions>(configuration.GetSection(AwoxBleOptions.SectionName));
 
+        // The platform transport is registered as TRANSIENT — the connection pool news up one instance per
+        // mesh (up to ble.max_connections) so commands for different meshes run on their own held session.
+        // Every consumer injects the pool (the IAwoxBleConnection singleton); credential-less calls route
+        // to the default mesh, so the legacy/advert paths are unchanged. Cap=1 ⇒ exactly the old behaviour.
 #if WINDOWS
-        services.AddSingleton<IAwoxBleConnection, WindowsBleConnection>();
+        services.AddTransient<WindowsBleConnection>();
+        services.AddSingleton<Func<IAwoxBleConnection>>(sp => () => sp.GetRequiredService<WindowsBleConnection>());
         services.AddSingleton<IAwoxBleScanner, WindowsBleScanner>();
 #else
-        services.AddSingleton<IAwoxBleConnection, BlueZBleConnection>();
+        services.AddTransient<BlueZBleConnection>();
+        services.AddSingleton<Func<IAwoxBleConnection>>(sp => () => sp.GetRequiredService<BlueZBleConnection>());
         services.AddSingleton<IAwoxBleScanner, BlueZBleScanner>();
 #endif
+        services.AddSingleton<IAwoxBleConnection, PooledBleConnection>();
 
         // Idle-disconnect runs regardless of the light backend; it self-disables when
         // MaxIdleDisconnectSeconds <= 0, so it's safe to register unconditionally.

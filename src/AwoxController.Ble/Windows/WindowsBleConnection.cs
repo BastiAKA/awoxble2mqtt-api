@@ -131,6 +131,9 @@ public sealed class WindowsBleConnection : IAwoxBleConnection
            && string.Equals(_sessionMeshName, meshName, StringComparison.Ordinal)
            && string.Equals(_sessionMeshPassword, meshPassword, StringComparison.Ordinal);
 
+    public string? ConnectedGatewayMacOnMesh(string meshName, string meshPassword)
+        => IsConnectedToMesh(meshName, meshPassword) ? _gatewayMac : null;
+
     private bool IsSession(string gatewayMac, string meshName, string meshPassword)
         => IsConnectedToMesh(meshName, meshPassword)
            && string.Equals(_gatewayMac, gatewayMac, StringComparison.OrdinalIgnoreCase);

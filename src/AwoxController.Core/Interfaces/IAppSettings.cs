@@ -105,6 +105,20 @@ public static class AppSettingKeys
 
     /// <summary>Default settle after stopping discovery before a cold connect (600 ms).</summary>
     public const int BleConnectSettleMsDefault = 600;
+
+    /// <summary>
+    /// Max BLE GATT sessions the connection pool may hold at once — one per mesh. Lets commands for
+    /// DIFFERENT meshes be sent concurrently (each on its own held session) instead of disconnect+
+    /// reconnecting on every mesh switch; the command queue drains up to this many meshes in parallel.
+    /// Within ONE mesh a single session already fans out (relay/broadcast), so extra connections there
+    /// only add dongle churn — concurrency is across meshes only. <c>1</c> = legacy behaviour (one held
+    /// session, reconnect on mesh switch, serial drain). Kept low by default for the flaky Pi dongle;
+    /// raise once stable. Proven feasible 2026-06-14 (two simultaneous links across meshes).
+    /// </summary>
+    public const string BleMaxConnections = "ble.max_connections";
+
+    /// <summary>Default max concurrent per-mesh BLE sessions (2 — conservative for the Pi dongle).</summary>
+    public const int BleMaxConnectionsDefault = 2;
 }
 
 /// <summary>

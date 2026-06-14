@@ -38,7 +38,11 @@ reachable from a Samsung SmartThings hub.
     Google/Alexa. See [SMARTHOME.md](SMARTHOME.md).
 13. **Dimmer/mode fixes.** White-dim no longer flips Connect-C to colour; an off lamp is powered on
     before a colour command; Connect-Z/Connect-C brightness reporting no longer jumps on a mode switch.
-14. **Docs + ops.** This documentation, per-table DB scripts + `CreateDBEnv.ps1`, and a
+14. **Multi-mesh connection pool.** The backend holds one GATT session **per mesh** (up to
+    `ble.max_connections`, default 2) instead of a single session that reconnected on every mesh switch,
+    and the command queue drains different meshes **concurrently** (serial within a mesh, which already
+    fans out via relay/broadcast). `ble.max_connections=1` restores the old single-session behaviour.
+15. **Docs + ops.** This documentation, per-table DB scripts + `CreateDBEnv.ps1`, and a
     build-on-dev-box / copy-DLLs deploy (`scripts/deploy-from-windows.ps1`) so the 1 GB Pi never compiles.
 
 ## What's next

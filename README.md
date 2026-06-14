@@ -40,6 +40,9 @@ and from the **Samsung SmartThings** app (reached via the MQTT → Matter bridge
 - **🎬 Scenes** — named sets of lamps + desired states, applied in one call. Lamps are driven
   **grouped by mesh** (one connect per mesh, the rest relayed) so a mixed-mesh scene doesn't
   thrash the radio.
+- **🔀 Multi-mesh connections** — holds one GATT session **per mesh** (up to `ble.max_connections`)
+  so commands for lamps on different meshes run **concurrently** instead of reconnecting on every
+  mesh switch; within a mesh a single session still fans out via relay/broadcast.
 - **⚡ Live push (SignalR)** — every state change is pushed to clients over `/hubs/lights`,
   keyed by MAC.
 - **🏠 Home Assistant / Matter bridge** — a standalone [MQTT bridge](src/AwoxController.MqttBridge)

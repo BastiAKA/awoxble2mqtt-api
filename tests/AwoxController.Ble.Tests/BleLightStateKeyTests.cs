@@ -66,6 +66,7 @@ public class BleLightStateKeyTests
         public bool IsConnecting => false;
         public string? ConnectedGatewayMac => null;
         public bool IsConnectedToMesh(string meshName, string meshPassword) => false;
+        public string? ConnectedGatewayMacOnMesh(string meshName, string meshPassword) => null;
         public DateTimeOffset? LastActivityUtc => null;
         public event Action<byte[]>? StatusReceived { add { } remove { } }
         public Task<bool> EnsureConnectedAsync(CancellationToken ct = default) => Task.FromResult(true);

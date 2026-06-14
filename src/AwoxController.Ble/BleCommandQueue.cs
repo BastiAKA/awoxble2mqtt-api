@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using AwoxController.Core.Interfaces;
 using AwoxController.Core.Models;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -102,6 +103,7 @@ public sealed class BleCommandQueue : BackgroundService, IBleCommandQueue, IBleC
     private const int MaxAttempts = 1;
 
     private readonly IRelayCoordinator _relay;
+    private readonly IAppSettings _settings;
     private readonly ILogger<BleCommandQueue> _logger;
 
     private readonly object _lock = new();
@@ -115,9 +117,10 @@ public sealed class BleCommandQueue : BackgroundService, IBleCommandQueue, IBleC
     private long _seq;
     private readonly Dictionary<string, long> _latestSeqByLamp = new(StringComparer.Ordinal);
 
-    public BleCommandQueue(IRelayCoordinator relay, ILogger<BleCommandQueue> logger)
+    public BleCommandQueue(IRelayCoordinator relay, IAppSettings settings, ILogger<BleCommandQueue> logger)
     {
         _relay = relay;
+        _settings = settings;
         _logger = logger;
     }
 
@@ -192,9 +195,11 @@ public sealed class BleCommandQueue : BackgroundService, IBleCommandQueue, IBleC
             {
                 await _signal.WaitAsync(stoppingToken);
 
-                // Drain everything currently queued in one pass (new arrivals just re-signal us).
-                while (TryDequeueLamp(out var lamp))
-                    await DrainLampAsync(lamp, stoppingToken);
+                // Drain everything currently queued in one pass (new arrivals just re-signal us). Lamps on
+                // DIFFERENT meshes are drained concurrently (each on its own pooled session), up to
+                // ble.max_connections; within a mesh they stay serial on that mesh's single connection.
+                while (TryDequeueAllLamps(out var lamps))
+                    await DrainMeshesAsync(lamps, stoppingToken);
 
                 // Collapse any leftover permits from commands we already drained above, so we block
                 // again instead of spinning through no-op wakeups.
@@ -205,8 +210,9 @@ public sealed class BleCommandQueue : BackgroundService, IBleCommandQueue, IBleC
         _logger.LogInformation("BLE command queue worker stopped.");
     }
 
-    private bool TryDequeueLamp(out LampPending lamp)
+    private bool TryDequeueAllLamps(out List<LampPending> lamps)
     {
+        lamps = new List<LampPending>();
         lock (_lock)
         {
             var node = _order.First;
@@ -214,18 +220,44 @@ public sealed class BleCommandQueue : BackgroundService, IBleCommandQueue, IBleC
             {
                 var next = node.Next;          // capture before we mutate the list
                 _order.Remove(node);
+                // Skip empty/stale entries (already gone, or coalesced down to nothing).
                 if (_pending.Remove(node.Value, out var p) && p.Channels.Count > 0)
-                {
-                    lamp = p;
-                    return true;
-                }
-                // Empty/stale entry (already gone, or coalesced down to nothing) — keep scanning.
+                    lamps.Add(p);
                 node = next;
             }
         }
+        return lamps.Count > 0;
+    }
 
-        lamp = null!;
-        return false;
+    /// <summary>
+    /// Drains a batch of lamps: lamps on the SAME mesh stay serial (one held session per mesh), lamps on
+    /// DIFFERENT meshes run concurrently up to <c>ble.max_connections</c>. Order within a mesh is the
+    /// oldest-received-first order the batch was dequeued in (GroupBy is stable).
+    /// </summary>
+    private async Task DrainMeshesAsync(List<LampPending> lamps, CancellationToken ct)
+    {
+        var max = Math.Max(1, _settings.GetInt(AppSettingKeys.BleMaxConnections, AppSettingKeys.BleMaxConnectionsDefault));
+        var byMesh = lamps.GroupBy(l => $"{l.MeshName}\0{l.MeshPassword}").ToList();
+
+        // One mesh, or concurrency disabled → drain serially exactly as before (no extra Task overhead).
+        if (byMesh.Count <= 1 || max <= 1)
+        {
+            foreach (var lamp in lamps)
+                await DrainLampAsync(lamp, ct);
+            return;
+        }
+
+        using var gate = new SemaphoreSlim(max);
+        await Task.WhenAll(byMesh.Select(async group =>
+        {
+            await gate.WaitAsync(ct);
+            try
+            {
+                foreach (var lamp in group)
+                    await DrainLampAsync(lamp, ct);
+            }
+            finally { gate.Release(); }
+        }));
     }
 
     private async Task DrainLampAsync(LampPending lamp, CancellationToken ct)

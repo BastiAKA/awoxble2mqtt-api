@@ -268,6 +268,9 @@ public sealed class BlueZBleConnection : IAwoxBleConnection
            && string.Equals(_sessionMeshName, meshName, StringComparison.Ordinal)
            && string.Equals(_sessionMeshPassword, meshPassword, StringComparison.Ordinal);
 
+    public string? ConnectedGatewayMacOnMesh(string meshName, string meshPassword)
+        => IsConnectedToMesh(meshName, meshPassword) ? _gatewayMac : null;
+
     /// <summary>True when the live session matches this specific gateway AND mesh credentials.</summary>
     private bool IsSession(string gatewayMac, string meshName, string meshPassword)
         => IsConnectedToMesh(meshName, meshPassword)

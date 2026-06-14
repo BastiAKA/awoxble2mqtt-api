@@ -210,6 +210,8 @@ public class RelayCoordinatorTests
         public event Action<byte[]>? StatusReceived { add { } remove { } }
         public bool IsConnectedToMesh(string meshName, string meshPassword)
             => IsConnected && meshName == _mesh && meshPassword == _pw;
+        public string? ConnectedGatewayMacOnMesh(string meshName, string meshPassword)
+            => IsConnectedToMesh(meshName, meshPassword) ? ConnectedGatewayMac : null;
         public Task<bool> EnsureConnectedAsync(CancellationToken ct = default) => Task.FromResult(IsConnected);
         public Task DisconnectAsync(CancellationToken ct = default) => Task.CompletedTask;
         public Task SendCommandAsync(ushort d, byte c, byte[] data, CancellationToken ct = default) => Task.CompletedTask;

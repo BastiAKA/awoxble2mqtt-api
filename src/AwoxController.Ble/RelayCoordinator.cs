@@ -73,13 +73,15 @@ public sealed class RelayCoordinator : IRelayCoordinator
             return null;
         }
 
-        var host = _connection.ConnectedGatewayMac; // H, or null when no session is held
+        // The node (if any) already holding a session ON THIS COMMAND'S MESH — H, or null. Mesh-scoped so
+        // it's correct with the per-mesh connection pool: we relay only through a node held on the same
+        // mesh, never the (possibly different) mesh another pooled session is on.
+        var host = _connection.ConnectedGatewayMacOnMesh(cmd.MeshName, cmd.MeshPassword);
 
         // Prefer relaying through an already-held SAME-mesh node (no reconnect) — unless it IS the target,
         // or this (H,T) relay is known-unreachable (then go straight to the target). Reachability WITHIN
         // the mesh is settled by the advert confirmation below, not assumed.
         var canRelay = host is not null
-            && _connection.IsConnectedToMesh(cmd.MeshName, cmd.MeshPassword)
             && !SameMac(host, cmd.TargetMac)
             && _map.Get(host, cmd.TargetMac) != RelayReachabilityMap.Reachability.Unreachable;
         var gateway = canRelay ? host! : cmd.GatewayMac;

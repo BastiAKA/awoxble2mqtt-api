@@ -29,6 +29,15 @@ public interface IAwoxBleConnection : IAsyncDisposable
     bool IsConnectedToMesh(string meshName, string meshPassword);
 
     /// <summary>
+    /// The MAC of the gateway node currently holding a session ON THE GIVEN MESH, or null when no session
+    /// is held for those credentials. Mesh-scoped variant of <see cref="ConnectedGatewayMac"/>: with a
+    /// per-mesh connection pool the relay coordinator must ask "is a node already held on THIS command's
+    /// mesh that I can relay through", not "is the single global connection on it". For a single
+    /// connection this is just <see cref="ConnectedGatewayMac"/> when <see cref="IsConnectedToMesh"/>.
+    /// </summary>
+    string? ConnectedGatewayMacOnMesh(string meshName, string meshPassword);
+
+    /// <summary>
     /// UTC time of the last successful connect or command on the held session, or null when no
     /// session is held. The idle-disconnect service uses this to decide when to drop the link.
     /// </summary>

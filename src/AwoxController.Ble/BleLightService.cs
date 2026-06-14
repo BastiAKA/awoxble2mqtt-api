@@ -90,7 +90,7 @@ public sealed class BleLightService : ILightBackend, IHostedService
 
     public IReadOnlyCollection<LightDevice> GetDevices() => _devices.Values.ToList();
 
-    public bool TryGetState(string deviceId, out LightState state) => _states.TryGetValue(deviceId, out state!);
+    public bool TryGetState(string deviceId, out LightState state) => _states.TryGetValue(KeyOf(deviceId), out state!);
 
     // ---- Commands -------------------------------------------------------------------------
 
@@ -104,7 +104,7 @@ public sealed class BleLightService : ILightBackend, IHostedService
 
     public Task ToggleAsync(string deviceId, CancellationToken ct = default)
     {
-        var on = _states.TryGetValue(deviceId, out var s) && s.IsOn;
+        var on = _states.TryGetValue(KeyOf(deviceId), out var s) && s.IsOn;
         return SetPowerAsync(deviceId, !on, ct);
     }
 
@@ -113,7 +113,7 @@ public sealed class BleLightService : ILightBackend, IHostedService
         percent = Math.Clamp(percent, 0, 100);
         var dest = DestId(deviceId);
 
-        if (_colorMode.TryGetValue(deviceId, out var color) && color)
+        if (_colorMode.TryGetValue(KeyOf(deviceId), out var color) && color)
         {
             var value = Scale(percent, ColorBrightnessMin, ColorBrightnessMax);
             await Connection().SendCommandAsync(dest, AwoxMeshProtocol.CmdColorBrightness, [(byte)value], ct);
@@ -132,7 +132,7 @@ public sealed class BleLightService : ILightBackend, IHostedService
     {
         var dest = DestId(deviceId);
         await Connection().SendCommandAsync(dest, AwoxMeshProtocol.CmdColor, [0x04, color.R, color.G, color.B], ct);
-        _colorMode[deviceId] = true;
+        _colorMode[KeyOf(deviceId)] = true;
         var s = StateOf(deviceId);
         s.Color = color;
         s.IsOn = true;
@@ -150,7 +150,7 @@ public sealed class BleLightService : ILightBackend, IHostedService
         temp = Math.Clamp(temp, 0, WhiteTempMax);
 
         await Connection().SendCommandAsync(dest, AwoxMeshProtocol.CmdWhiteTemperature, [(byte)temp], ct);
-        _colorMode[deviceId] = false;
+        _colorMode[KeyOf(deviceId)] = false;
         StateOf(deviceId).ColorTempMireds = mireds;
         Touch(deviceId);
     }
@@ -171,14 +171,15 @@ public sealed class BleLightService : ILightBackend, IHostedService
         var device = ResolveByMeshId(meshId);
         if (device is null) return;
 
+        var key = KeyOf(device);
         var state = StateOf(device);
         state.IsOn = (mode % 2) == 1;
-        _colorMode[device] = mode == 3 || mode == 7; // 3/7 = color modes, 1/5 = white
+        _colorMode[key] = mode == 3 || mode == 7; // 3/7 = color modes, 1/5 = white
 
         if ((mode % 2) == 1) // only trust the values while the bulb is on
         {
             state.Color = new RgbColor(message[16], message[17], message[18]);
-            state.BrightnessPercent = _colorMode[device]
+            state.BrightnessPercent = _colorMode[key]
                 ? Unscale(message[15], ColorBrightnessMin, ColorBrightnessMax)
                 : Unscale(message[13], WhiteBrightnessMin, WhiteBrightnessMax);
         }
@@ -198,7 +199,7 @@ public sealed class BleLightService : ILightBackend, IHostedService
         state.IsOn = advert.IsOn;
         state.BrightnessPercent = advert.BrightnessPercent;
         state.IsColorMode = advert.IsColorMode;
-        _colorMode[deviceId] = advert.IsColorMode;
+        _colorMode[KeyOf(deviceId)] = advert.IsColorMode;
 
         if (advert.IsColorMode)
             state.Color = advert.ToRgb();
@@ -246,7 +247,22 @@ public sealed class BleLightService : ILightBackend, IHostedService
                 $"Unknown AwoX BLE device '{deviceId}'. Add it to AwoxBle:Devices (Name/Mac/MeshId), " +
                 $"or use the direct MAC endpoints POST/PUT /api/ble/{{mac}}/… instead of /api/lights.");
 
-    private LightState StateOf(string deviceId) => _states.GetOrAdd(deviceId, _ => new LightState());
+    private LightState StateOf(string deviceId) => _states.GetOrAdd(KeyOf(deviceId), _ => new LightState());
+
+    /// <summary>
+    /// The single canonical key for a lamp's live state, shared by the command, notify and advert paths.
+    /// Commands address a lamp by its friendly <c>Name</c> (config key) while the advert/notify paths use
+    /// its MAC, so without this they split into two <see cref="LightState"/> entries — and a command then
+    /// pushes a stale brightness over the value the advert just read (the dimmer "jumps back"). Resolving
+    /// every path to the lamp's normalised MAC keeps them on ONE state object.
+    /// </summary>
+    private string KeyOf(string deviceId)
+    {
+        var mac = _config.TryGetValue(deviceId, out var cfg) && !string.IsNullOrWhiteSpace(cfg.Mac)
+            ? cfg.Mac
+            : deviceId;
+        return AdvertScanMacResolver.NormalizeMac(mac);
+    }
 
     // Stamp the update time, then push to subscribers ONLY when a meaningful field actually changed.
     // The advert scanner calls this every poll tick, so the change-detection is what keeps the SignalR
@@ -257,12 +273,13 @@ public sealed class BleLightService : ILightBackend, IHostedService
         state.LastUpdatedUtc = DateTime.UtcNow;
         if (_notifier is null) return;
 
+        var key = KeyOf(deviceId);
         var signature = $"{state.IsOn}|{state.BrightnessPercent}|{state.ColorTempMireds}|" +
                         $"{state.Color.R},{state.Color.G},{state.Color.B}";
-        if (_published.TryGetValue(deviceId, out var prev) && prev == signature)
+        if (_published.TryGetValue(key, out var prev) && prev == signature)
             return; // nothing the UI cares about changed
 
-        _published[deviceId] = signature;
+        _published[key] = signature;
         // Push the lamp MAC (not the internal config name) as the id: it's the stable key downstream
         // consumers (the SmartHome BFF relay) match against the device registry on. Fall back to the
         // config name if a device somehow has no MAC configured.

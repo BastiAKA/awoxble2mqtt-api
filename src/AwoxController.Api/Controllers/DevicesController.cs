@@ -382,6 +382,22 @@ public sealed class DevicesController : ControllerBase
         if (!lamp.SeparateWhiteColor && (brightness ?? colorBrightness) is { } b)
             st = st with { Brightness = b, ColorBrightness = b };
 
+        // A command that does NOT itself set brightness (colour, white-temp, power) must not carry a STALE
+        // stored brightness into the persisted state and the live push below. LastState is only written on
+        // commands, but the remote dims the lamp via advert WITHOUT a command — so the stored brightness
+        // drifts from reality. The advert cache holds the lamp's true current level, so refresh from it:
+        // single-brightness lamps mirror into both fields, a separate-channel lamp (Rovito Z) takes the
+        // channel the advert is in. Without this, e.g. changing colour pushed an old 99 % while the lamp
+        // really sat at 40 %.
+        if (brightness is null && colorBrightness is null
+            && !string.IsNullOrWhiteSpace(lamp.Mac) && _stateCache.TryGet(lamp.Mac, out var liveBri))
+        {
+            var live = liveBri.BrightnessPercent;
+            st = !lamp.SeparateWhiteColor ? st with { Brightness = live, ColorBrightness = live }
+               : liveBri.IsColorMode      ? st with { ColorBrightness = live }
+                                          : st with { Brightness = live };
+        }
+
         lamp.LastState = st.ToJson();
         await _store.UpdateLampAsync(lamp, ct);
 
@@ -478,13 +494,24 @@ public sealed class DevicesController : ControllerBase
             if (cache is null || string.IsNullOrWhiteSpace(l.Mac) || !cache.TryGet(l.Mac, out var live))
                 return state;
 
-            return (state ?? new LampStateDto()) with
+            var dto = (state ?? new LampStateDto()) with
             {
                 On = live.IsOn,
-                Brightness = live.BrightnessPercent,
                 Color = new RgbDto(live.Color.R, live.Color.G, live.Color.B),
                 ColorTemp = live.ColorTempMireds,
             };
+
+            // The advert carries the brightness of the ACTIVE channel only (the lamp broadcasts RGB in
+            // colour mode, white-temp in white mode). A single-brightness lamp has one physical dimmer, so
+            // mirror the live value into BOTH fields — otherwise the field the advert didn't touch keeps a
+            // stale persisted value (e.g. ColorBrightness=99 from a previous run) and the slider "jumps" to
+            // it on a mode switch. A genuine separate-channel lamp (Rovito Z, SeparateWhiteColor) keeps two
+            // independent dimmers, so route the live value to the channel the advert is in and leave the
+            // other as persisted.
+            var bri = live.BrightnessPercent;
+            return !l.SeparateWhiteColor ? dto with { Brightness = bri, ColorBrightness = bri }
+                 : live.IsColorMode     ? dto with { ColorBrightness = bri }
+                                        : dto with { Brightness = bri };
         }
 
         private static readonly string[] RemoteHints = { "fernbedien", "remote" };

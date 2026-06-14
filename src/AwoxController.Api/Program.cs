@@ -129,6 +129,10 @@ if (dbConfigured)
             AppSettingKeys.BleConnectSettleMs,
             AppSettingKeys.BleConnectSettleMsDefault.ToString(),
             "Pause (ms) after stopping LE discovery before a cold connect (else le-connection-abort-by-local). Was 1.5s for the flaky Pi-3 onboard radio; the BT500 dongle needs far less. Paid on every cold connect — dial down carefully.");
+        await settings.EnsureDefaultAsync(
+            AppSettingKeys.BleMaxConnections,
+            AppSettingKeys.BleMaxConnectionsDefault.ToString(),
+            "Max held BLE sessions, one per mesh. Lets commands for different meshes run concurrently instead of reconnecting on every mesh switch; the command queue drains up to this many meshes in parallel. 1 = legacy single-session behaviour. Kept low for the flaky Pi dongle.");
     }
     catch (Exception ex)
     {

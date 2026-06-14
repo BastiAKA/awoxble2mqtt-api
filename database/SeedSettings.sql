@@ -28,4 +28,7 @@ INSERT IGNORE INTO app_settings (`Key`, Value, Description, UpdatedUtc) VALUES
    UTC_TIMESTAMP(6)),
   ('ble.connect_settle_ms', '600',
    'Pause (ms) after stopping LE discovery before a cold connect (else le-connection-abort-by-local). Was 1.5s for the flaky Pi-3 onboard radio; the BT500 dongle needs far less. Paid on every cold connect — dial down carefully.',
+   UTC_TIMESTAMP(6)),
+  ('ble.max_connections', '2',
+   'Max held BLE sessions, one per mesh. Lets commands for different meshes run concurrently instead of reconnecting on every mesh switch; the command queue drains up to this many meshes in parallel. 1 = legacy single-session behaviour. Kept low for the flaky Pi dongle.',
    UTC_TIMESTAMP(6));
